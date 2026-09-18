@@ -1,0 +1,97 @@
+{
+  "plan": "news-browse",
+  "model": "typesafe/jev-1.13",
+  "steps": [
+    {
+      "step": "act restart-app",
+      "elapsed_ms": 621,
+      "passed": true
+    },
+    {
+      "step": "act await-ui-element",
+      "elapsed_ms": 2496,
+      "passed": true
+    },
+    {
+      "step": "act await-ui-element",
+      "elapsed_ms": 157,
+      "passed": true
+    },
+    {
+      "step": "act await-screen-idle",
+      "elapsed_ms": 497,
+      "passed": true
+    },
+    {
+      "step": "assert feed-shown",
+      "answer": {
+        "probability": 0.98
+      },
+      "decide_ms": 224,
+      "input_tokens": 1558,
+      "output_tokens": 22,
+      "cost": 0.000065436,
+      "elapsed_ms": 387,
+      "passed": true
+    },
+    {
+      "step": "choose top-article",
+      "answer": {
+        "probability": 1.0,
+        "confidence": 1.0,
+        "choice": "e2"
+      },
+      "decide_ms": 275,
+      "input_tokens": 1845,
+      "output_tokens": 92,
+      "cost": 0.00007749,
+      "elapsed_ms": 565,
+      "passed": true
+    },
+    {
+      "step": "act await-ui-element",
+      "elapsed_ms": 1176,
+      "passed": true
+    },
+    {
+      "step": "assert article-open",
+      "answer": {
+        "probability": 0.96
+      },
+      "decide_ms": 244,
+      "input_tokens": 1490,
+      "output_tokens": 21,
+      "cost": 0.00006258,
+      "elapsed_ms": 635,
+      "passed": true
+    },
+    {
+      "step": "act gesture-swipe",
+      "elapsed_ms": 355,
+      "passed": true
+    },
+    {
+      "step": "act await-screen-idle",
+      "elapsed_ms": 3011,
+      "passed": true
+    },
+    {
+      "step": "assert article-scrolled",
+      "answer": {
+        "probability": 0.79
+      },
+      "decide_ms": 208,
+      "input_tokens": 1657,
+      "output_tokens": 23,
+      "cost": 0.000069594,
+      "elapsed_ms": 439,
+      "passed": false,
+      "reason": "noul 0.79 is under the threshold 0.80"
+    }
+  ],
+  "total_ms": 10343,
+  "outcome": {
+    "status": "fail",
+    "reason": "noul 0.79 is under the threshold 0.80"
+  }
+}

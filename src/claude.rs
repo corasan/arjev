@@ -63,7 +63,7 @@ pub fn arguments(model: &str, questions: &BTreeMap<String, Question>) -> Vec<Str
         "--tools",
         "",
         "--max-turns",
-        "1",
+        "3",
         "--system-prompt",
         INSTRUCTIONS,
         "--strict-mcp-config",

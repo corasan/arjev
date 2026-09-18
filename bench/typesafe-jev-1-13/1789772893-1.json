@@ -1,0 +1,44 @@
+{
+  "plan": "news-browse",
+  "model": "typesafe/jev-1.13",
+  "steps": [
+    {
+      "step": "act restart-app",
+      "elapsed_ms": 546,
+      "passed": true
+    },
+    {
+      "step": "act await-ui-element",
+      "elapsed_ms": 8193,
+      "passed": true
+    },
+    {
+      "step": "act await-ui-element",
+      "elapsed_ms": 177,
+      "passed": true
+    },
+    {
+      "step": "act await-screen-idle",
+      "elapsed_ms": 638,
+      "passed": true
+    },
+    {
+      "step": "assert feed-shown",
+      "answer": {
+        "probability": 0.5
+      },
+      "decide_ms": 416,
+      "input_tokens": 1931,
+      "output_tokens": 22,
+      "cost": 0.000081102,
+      "elapsed_ms": 602,
+      "passed": false,
+      "reason": "noul 0.50 is under the threshold 0.80"
+    }
+  ],
+  "total_ms": 10159,
+  "outcome": {
+    "status": "fail",
+    "reason": "noul 0.50 is under the threshold 0.80"
+  }
+}

@@ -85,6 +85,8 @@ picks article cards. Each option carries the element's role, label, and accessib
 `choose_target` in `src/verdict.rs` taps only when confidence is at least 0.8 and the winner leads the
 runner-up by 0.2; otherwise the step fails and names the top two candidates.
 
+A `choose` step takes `threshold` (default 0.8) as its confidence floor, the same way `assert` does.
+
 `examples/news-browse.yaml` is the larger example: open Apple News, open the top card, scroll, reveal the
 navigation bar, go back, scroll the feed, open a second card. Apple News must have been opened once on the
 simulator so its welcome screen and location prompt are gone.
@@ -108,3 +110,18 @@ prompt that the CLI sends on every call (about 11k tokens per decision). The cos
 list price the CLI reports; a Claude subscription does not bill it per call.
 
 Raw reports are under `bench/typesafe-jev-1-13/` and `bench/claude-opus-5/`.
+
+## Demo video
+
+Record one real-time run per decider with Argent, then stack them side by side with a label, a timer, and a
+DONE badge per side:
+
+```sh
+argent run screen-recording-start --udid <UDID> --trimStatic false --timeLimitSeconds 400
+cargo run -q -- run examples/news-browse.yaml --udid <UDID> --decider jev
+argent run screen-recording-stop --udid <UDID>      # then move the mp4 to demo/jev-news.mp4
+# repeat with --decider claude into demo/opus5-news.mp4
+python3 demo/compose.py demo/jev-news.mp4 "Jev" demo/opus5-news.mp4 "Claude Opus 5" demo/jev-vs-opus5-news.mp4
+```
+
+`compose.py` needs `ffmpeg` and Pillow. The News plan ran in 26.5 s with Jev and 62.7 s with Opus 5.

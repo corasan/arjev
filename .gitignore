@@ -1,2 +1,4 @@
 target/
 .env
+demo/*.mp4
+.argent/recordings/

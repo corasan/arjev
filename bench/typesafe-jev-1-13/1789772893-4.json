@@ -1,0 +1,167 @@
+{
+  "plan": "news-browse",
+  "model": "typesafe/jev-1.13",
+  "steps": [
+    {
+      "step": "act restart-app",
+      "elapsed_ms": 541,
+      "passed": true
+    },
+    {
+      "step": "act await-ui-element",
+      "elapsed_ms": 2589,
+      "passed": true
+    },
+    {
+      "step": "act await-ui-element",
+      "elapsed_ms": 93,
+      "passed": true
+    },
+    {
+      "step": "act await-screen-idle",
+      "elapsed_ms": 1392,
+      "passed": true
+    },
+    {
+      "step": "assert feed-shown",
+      "answer": {
+        "probability": 0.97
+      },
+      "decide_ms": 261,
+      "input_tokens": 1418,
+      "output_tokens": 22,
+      "cost": 0.000059556,
+      "elapsed_ms": 511,
+      "passed": true
+    },
+    {
+      "step": "choose top-article",
+      "answer": {
+        "probability": 0.99,
+        "confidence": 0.99,
+        "choice": "e2"
+      },
+      "decide_ms": 232,
+      "input_tokens": 1616,
+      "output_tokens": 76,
+      "cost": 0.000067872,
+      "elapsed_ms": 486,
+      "passed": true
+    },
+    {
+      "step": "act await-ui-element",
+      "elapsed_ms": 1849,
+      "passed": true
+    },
+    {
+      "step": "assert article-open",
+      "answer": {
+        "probability": 0.98
+      },
+      "decide_ms": 216,
+      "input_tokens": 1601,
+      "output_tokens": 21,
+      "cost": 0.000067242,
+      "elapsed_ms": 469,
+      "passed": true
+    },
+    {
+      "step": "act gesture-swipe",
+      "elapsed_ms": 366,
+      "passed": true
+    },
+    {
+      "step": "act await-screen-idle",
+      "elapsed_ms": 2567,
+      "passed": true
+    },
+    {
+      "step": "assert article-scrolled",
+      "answer": {
+        "probability": 0.86
+      },
+      "decide_ms": 244,
+      "input_tokens": 1199,
+      "output_tokens": 23,
+      "cost": 0.000050358,
+      "elapsed_ms": 354,
+      "passed": true
+    },
+    {
+      "step": "act gesture-swipe",
+      "elapsed_ms": 369,
+      "passed": true
+    },
+    {
+      "step": "act await-screen-idle",
+      "elapsed_ms": 2794,
+      "passed": true
+    },
+    {
+      "step": "choose back-to-feed",
+      "answer": {
+        "probability": 0.99,
+        "confidence": 0.99,
+        "choice": "e1"
+      },
+      "decide_ms": 265,
+      "input_tokens": 1715,
+      "output_tokens": 100,
+      "cost": 0.00007203,
+      "elapsed_ms": 475,
+      "passed": true
+    },
+    {
+      "step": "act await-ui-element",
+      "elapsed_ms": 557,
+      "passed": true
+    },
+    {
+      "step": "act gesture-swipe",
+      "elapsed_ms": 362,
+      "passed": true
+    },
+    {
+      "step": "act await-screen-idle",
+      "elapsed_ms": 3029,
+      "passed": true
+    },
+    {
+      "step": "assert feed-scrolled",
+      "answer": {
+        "probability": 0.92
+      },
+      "decide_ms": 282,
+      "input_tokens": 1579,
+      "output_tokens": 23,
+      "cost": 0.000066318,
+      "elapsed_ms": 600,
+      "passed": true
+    },
+    {
+      "step": "choose second-article",
+      "answer": {
+        "probability": 0.87,
+        "confidence": 0.86,
+        "choice": "e2"
+      },
+      "decide_ms": 211,
+      "input_tokens": 1882,
+      "output_tokens": 92,
+      "cost": 0.000079044,
+      "elapsed_ms": 481,
+      "passed": true
+    },
+    {
+      "step": "act await-ui-element",
+      "elapsed_ms": 15008,
+      "passed": false,
+      "reason": "tool reported success=false: no element matched the selector before timeout"
+    }
+  ],
+  "total_ms": 34902,
+  "outcome": {
+    "status": "fail",
+    "reason": "tool reported success=false: no element matched the selector before timeout"
+  }
+}

@@ -47,6 +47,8 @@ pub enum Step {
         then: ChooseAction,
         #[serde(default)]
         roles: Vec<String>,
+        #[serde(default = "default_threshold")]
+        threshold: f64,
     },
 }
 

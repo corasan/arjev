@@ -8,7 +8,7 @@ use serde_json::{json, Map, Value};
 use crate::argent::{ArgentClient, Device};
 use crate::decider::{Decider, Selection};
 use crate::jev::{Answer, ChoiceAnswer, NoulCriteria, Question};
-use crate::plan::{default_threshold, ChooseAction, DeviceSelector, Plan, Step};
+use crate::plan::{ChooseAction, DeviceSelector, Plan, Step};
 use crate::screen::{Element, Screen};
 use crate::verdict::{assert_verdict, choose_target, AssertVerdict, ChooseVerdict};
 
@@ -102,6 +102,7 @@ enum Inquiry<'a> {
         question: &'a str,
         then: ChooseAction,
         roles: &'a [String],
+        threshold: f64,
     },
 }
 
@@ -199,11 +200,13 @@ impl Runner {
                 question,
                 then,
                 roles,
+                threshold,
             } => Phase::Observe(Inquiry::Choose {
                 name,
                 question,
                 then: *then,
                 roles,
+                threshold: *threshold,
             }),
         };
 
@@ -252,6 +255,7 @@ impl Runner {
                 question,
                 then,
                 roles,
+                threshold,
             } => {
                 let options = self.offer(screen, roles);
                 if options.is_empty() {
@@ -267,7 +271,7 @@ impl Runner {
                     confidence: Some(chosen.confidence),
                     choice: Some(chosen.choice.clone()),
                 });
-                match choose_target(&chosen, default_threshold()) {
+                match choose_target(&chosen, threshold) {
                     ChooseVerdict::Tap(id) => {
                         let (x, y) = options
                             .iter()

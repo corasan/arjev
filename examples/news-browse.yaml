@@ -12,7 +12,7 @@ steps:
     args:
       condition: visible
       selector:
-        text: Sports
+        text: Stories
       timeoutMs: 20000
 
   - kind: act
@@ -52,16 +52,17 @@ steps:
     tool: gesture-swipe
     args:
       fromX: 0.5
-      fromY: 0.8
+      fromY: 0.85
       toX: 0.5
-      toY: 0.25
+      toY: 0.15
 
   - kind: act
     tool: await-screen-idle
 
   - kind: assert
     name: article-scrolled
-    question: Has the article been scrolled down, so the vertical scroll position is past the top?
+    question: Has the article content been scrolled down from the top, so the vertical scroll bar position is no longer 0%?
+    threshold: 0.7
 
   - kind: act
     tool: gesture-swipe
@@ -100,12 +101,14 @@ steps:
 
   - kind: assert
     name: feed-scrolled
-    question: Is the Today feed shown and scrolled down from the top?
+    question: Is the Today feed shown and scrolled down from the top, so the vertical scroll bar position is no longer 0%?
+    threshold: 0.7
 
   - kind: choose
     name: second-article
     question: Which element is a news article card that is not the first card and is not marked Apple News Plus?
     roles: [Group]
+    threshold: 0.5
     then: tap
 
   - kind: act
