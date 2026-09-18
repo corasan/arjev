@@ -1,0 +1,24 @@
+Source: ax-service
+Mode: flat
+Coordinates are normalized [0,1] fractions of the screen (x, y, width, height), not pixels.
+Pass them straight to gesture-tap / gesture-swipe / gesture-pinch, which expect this same space.
+To tap an element, use its centre: tap_x = frame.x + frame.width / 2, tap_y = frame.y + frame.height / 2.
+
+ROOT  AXGroup (0.000, 0.000, 1.000, 1.000)
+
+  AXGroup "Toolbar" id="Toolbar"  (0.000, 0.000, 1.000, 1.000)
+  AXGroup "Vertical scroll bar, 2 pages" value="0%"  (0.925, 0.121, 0.068, 0.814)
+  AXGroup "Settings"  (0.045, 0.125, 0.302, 0.043)
+  AXButton "Apple Account, Sign in to access your iCloud data, the App Store, Apple services, and more." id="com.apple.settings.primaryAppleAccount"  (0.045, 0.176, 0.909, 0.094)
+  AXTextField "apple.id" id="apple.id"  (0.091, 0.191, 0.136, 0.063)
+  AXStaticText "Apple Account"  (0.245, 0.191, 0.314, 0.025)
+  AXStaticText "Sign in to access your iCloud data, the App Store, Apple services, and more."  (0.245, 0.219, 0.600, 0.035)
+  AXButton "General" id="com.apple.settings.general"  (0.045, 0.307, 0.909, 0.054)
+  AXStaticText "General"  (0.086, 0.319, 0.230, 0.029)
+  AXButton "Accessibility" id="com.apple.settings.accessibility"  (0.045, 0.361, 0.909, 0.054)
+  AXStaticText "Accessibility"  (0.086, 0.374, 0.311, 0.029)
+  AXButton "Action Button" id="com.apple.settings.actionButton"  (0.045, 0.416, 0.909, 0.054)
+  AXStaticText "Action Button"  (0.086, 0.428, 0.331, 0.029)
+  AXButton "Appearance" id="com.apple.settings.appearance"  (0.045, 0.470, 0.909, 0.054)
+  AXStaticText "Appearance"  (0.086, 0.483, 0.305, 0.029)
+  AXButton "Camera" id="com.apple.settings.camera"  (0.045, 0.524, 0.909, 0.054)
