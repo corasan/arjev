@@ -1,0 +1,37 @@
+name: settings-general
+device: first
+
+steps:
+  - kind: act
+    tool: launch-app
+    args:
+      bundleId: com.apple.Preferences
+
+  - kind: act
+    tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        text: General
+      timeoutMs: 10000
+
+  - kind: assert
+    name: root-list
+    question: Is the iOS Settings root list visible, with entries like General and Accessibility?
+
+  - kind: choose
+    name: general-entry
+    question: Which element opens the General settings screen?
+    then: tap
+
+  - kind: act
+    tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        text: About
+      timeoutMs: 10000
+
+  - kind: assert
+    name: general-screen
+    question: Is the General settings screen shown?
