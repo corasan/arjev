@@ -6,7 +6,8 @@ use serde::Serialize;
 use serde_json::{json, Map, Value};
 
 use crate::argent::{ArgentClient, Device};
-use crate::jev::{Answer, ChoiceAnswer, JevClient, NoulCriteria, Question};
+use crate::decider::{Decider, Selection};
+use crate::jev::{Answer, ChoiceAnswer, NoulCriteria, Question};
 use crate::plan::{default_threshold, ChooseAction, DeviceSelector, Plan, Step};
 use crate::screen::{Element, Screen};
 use crate::verdict::{assert_verdict, choose_target, AssertVerdict, ChooseVerdict};
@@ -29,11 +30,22 @@ pub struct AnswerSummary {
     pub choice: Option<String>,
 }
 
+#[derive(Debug, Clone, Copy, Serialize)]
+pub struct Spend {
+    pub decide_ms: u128,
+    pub input_tokens: u64,
+    pub output_tokens: u64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cost: Option<f64>,
+}
+
 #[derive(Debug, Clone, Serialize)]
 pub struct StepResult {
     pub step: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub answer: Option<AnswerSummary>,
+    #[serde(flatten)]
+    pub spend: Option<Spend>,
     pub elapsed_ms: u128,
     pub passed: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -43,8 +55,16 @@ pub struct StepResult {
 #[derive(Debug, Clone, Serialize)]
 pub struct Report {
     pub plan: String,
+    pub model: String,
     pub steps: Vec<StepResult>,
+    pub total_ms: u128,
     pub outcome: Outcome,
+}
+
+#[derive(Default)]
+struct Observed {
+    answer: Option<AnswerSummary>,
+    spend: Option<Spend>,
 }
 
 impl StepResult {
@@ -98,29 +118,32 @@ enum Phase<'a> {
 
 pub struct Runner {
     argent: ArgentClient,
-    jev: Result<JevClient, String>,
+    decider: Result<Decider, String>,
+    model: String,
     udid: String,
     plan: Plan,
 }
 
 impl Runner {
-    pub fn new(argent: ArgentClient, plan: Plan, udid: String) -> Self {
+    pub fn new(argent: ArgentClient, plan: Plan, udid: String, selection: &Selection) -> Self {
         Self {
             argent,
-            jev: JevClient::from_env().map_err(|error| error.to_string()),
+            decider: Decider::new(selection).map_err(|error| error.to_string()),
+            model: selection.model.clone(),
             udid,
             plan,
         }
     }
 
     pub fn run(&self, mut observe: impl FnMut(&StepResult)) -> Report {
+        let whole = Instant::now();
         let mut steps = Vec::new();
         let mut outcome = Outcome::Pass;
 
         for step in &self.plan.steps {
             let started = Instant::now();
-            let mut answer = None;
-            let step_outcome = match self.drive(step, &mut answer) {
+            let mut observed = Observed::default();
+            let step_outcome = match self.drive(step, &mut observed) {
                 Ok(step_outcome) => step_outcome,
                 Err(error) => Outcome::Fail {
                     reason: format!("{error:#}"),
@@ -132,7 +155,8 @@ impl Runner {
             };
             let result = StepResult {
                 step: step.label(),
-                answer,
+                answer: observed.answer,
+                spend: observed.spend,
                 elapsed_ms: started.elapsed().as_millis(),
                 passed: step_outcome == Outcome::Pass,
                 reason,
@@ -147,12 +171,14 @@ impl Runner {
 
         Report {
             plan: self.plan.name.clone(),
+            model: self.model.clone(),
             steps,
+            total_ms: whole.elapsed().as_millis(),
             outcome,
         }
     }
 
-    fn drive(&self, step: &Step, answer: &mut Option<AnswerSummary>) -> Result<Outcome> {
+    fn drive(&self, step: &Step, observed: &mut Observed) -> Result<Outcome> {
         let mut phase = match step {
             Step::Act { tool, args } => Phase::Act(Target::Tool {
                 tool: tool.clone(),
@@ -183,7 +209,7 @@ impl Runner {
                 Phase::Observe(inquiry) => {
                     Phase::Decide(inquiry, Screen::parse(&self.argent.describe(&self.udid)?))
                 }
-                Phase::Decide(inquiry, screen) => self.decide(inquiry, &screen, answer)?,
+                Phase::Decide(inquiry, screen) => self.decide(inquiry, &screen, observed)?,
                 Phase::Act(target) => {
                     self.act(&target)?;
                     Phase::Done(Outcome::Pass)
@@ -197,7 +223,7 @@ impl Runner {
         &self,
         inquiry: Inquiry<'a>,
         screen: &Screen,
-        answer: &mut Option<AnswerSummary>,
+        observed: &mut Observed,
     ) -> Result<Phase<'a>> {
         match inquiry {
             Inquiry::Assert {
@@ -205,8 +231,8 @@ impl Runner {
                 question,
                 threshold,
             } => {
-                let noul = self.ask_noul(name, question, screen)?;
-                *answer = Some(AnswerSummary {
+                let noul = self.ask_noul(name, question, screen, observed)?;
+                observed.answer = Some(AnswerSummary {
                     probability: noul,
                     confidence: None,
                     choice: None,
@@ -227,8 +253,8 @@ impl Runner {
                 if options.is_empty() {
                     bail!("no interactive element is on screen to choose from");
                 }
-                let chosen = self.ask_choice(name, question, screen, &options)?;
-                *answer = Some(AnswerSummary {
+                let chosen = self.ask_choice(name, question, screen, &options, observed)?;
+                observed.answer = Some(AnswerSummary {
                     probability: chosen
                         .probabilities
                         .get(&chosen.choice)
@@ -242,7 +268,7 @@ impl Runner {
                         let (x, y) = options
                             .iter()
                             .find(|(option, _)| option == &id)
-                            .ok_or_else(|| anyhow!("Jev chose `{id}`, which is not on screen"))?
+                            .ok_or_else(|| anyhow!("the decider chose `{id}`, which is not on screen"))?
                             .1
                             .centre();
                         Ok(match then {
@@ -284,21 +310,23 @@ impl Runner {
             .collect()
     }
 
-    fn ask_noul(&self, name: &str, question: &str, screen: &Screen) -> Result<f64> {
-        let questions = BTreeMap::from([(
-            name.to_string(),
-            Question::Noul {
-                instructions: question.to_string(),
-                criteria: NoulCriteria {
-                    yes: "The screen matches what the question describes.".to_string(),
-                    no: "The screen does not match what the question describes.".to_string(),
-                },
+    fn ask_noul(
+        &self,
+        name: &str,
+        question: &str,
+        screen: &Screen,
+        observed: &mut Observed,
+    ) -> Result<f64> {
+        let asked = Question::Noul {
+            instructions: question.to_string(),
+            criteria: NoulCriteria {
+                yes: "The screen matches what the question describes.".to_string(),
+                no: "The screen does not match what the question describes.".to_string(),
             },
-        )]);
-        let decision = self.jev()?.decide(&state(screen), &questions)?;
-        match decision.answer(name)? {
-            Answer::Noul { noul } => Ok(*noul),
-            other => bail!("Jev answered `{name}` with {other:?} instead of a noul"),
+        };
+        match self.ask(name, asked, screen, observed)? {
+            Answer::Noul { noul } => Ok(noul),
+            other => bail!("the decider answered `{name}` with {other:?} instead of a noul"),
         }
     }
 
@@ -308,27 +336,42 @@ impl Runner {
         question: &str,
         screen: &Screen,
         options: &[(String, &Element)],
+        observed: &mut Observed,
     ) -> Result<ChoiceAnswer> {
-        let criteria = options
-            .iter()
-            .map(|(id, element)| (id.clone(), element.describe()))
-            .collect();
-        let questions = BTreeMap::from([(
-            name.to_string(),
-            Question::Choice {
-                instructions: question.to_string(),
-                criteria,
-            },
-        )]);
-        let decision = self.jev()?.decide(&state(screen), &questions)?;
-        match decision.answer(name)? {
-            Answer::Choice(chosen) => Ok(chosen.clone()),
-            other => bail!("Jev answered `{name}` with {other:?} instead of a choice"),
+        let asked = Question::Choice {
+            instructions: question.to_string(),
+            criteria: options
+                .iter()
+                .map(|(id, element)| (id.clone(), element.describe()))
+                .collect(),
+        };
+        match self.ask(name, asked, screen, observed)? {
+            Answer::Choice(chosen) => Ok(chosen),
+            other => bail!("the decider answered `{name}` with {other:?} instead of a choice"),
         }
     }
 
-    fn jev(&self) -> Result<&JevClient> {
-        self.jev.as_ref().map_err(|reason| anyhow!(reason.clone()))
+    fn ask(
+        &self,
+        name: &str,
+        question: Question,
+        screen: &Screen,
+        observed: &mut Observed,
+    ) -> Result<Answer> {
+        let decider = self
+            .decider
+            .as_ref()
+            .map_err(|reason| anyhow!(reason.clone()))?;
+        let questions = BTreeMap::from([(name.to_string(), question)]);
+        let started = Instant::now();
+        let decision = decider.decide(&state(screen), &questions)?;
+        observed.spend = Some(Spend {
+            decide_ms: started.elapsed().as_millis(),
+            input_tokens: decision.usage.input_tokens,
+            output_tokens: decision.usage.output_tokens,
+            cost: decision.usage.cost,
+        });
+        Ok(decision.answer(name)?.clone())
     }
 
     fn with_udid(&self, args: &Value) -> Value {

@@ -57,9 +57,11 @@ pub enum Answer {
     },
 }
 
-#[derive(Debug, Clone, PartialEq, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Deserialize)]
 pub struct Usage {
+    #[serde(alias = "prompt_tokens")]
     pub input_tokens: u64,
+    #[serde(alias = "completion_tokens")]
     pub output_tokens: u64,
     #[serde(default)]
     pub cost: Option<f64>,
@@ -78,7 +80,7 @@ impl Decision {
     pub fn answer(&self, name: &str) -> Result<&Answer> {
         self.answers
             .get(name)
-            .with_context(|| format!("Jev returned no answer named `{name}`"))
+            .with_context(|| format!("the decider returned no answer named `{name}`"))
     }
 }
 
@@ -89,20 +91,20 @@ pub struct JevClient {
 }
 
 impl JevClient {
-    pub fn from_env() -> Result<Self> {
-        let api_key = std::env::var("OPENROUTER_API_KEY").map_err(|_| {
-            anyhow::anyhow!("OPENROUTER_API_KEY is not set; export an OpenRouter API key to ask Jev")
-        })?;
-        let model = std::env::var("ARJEV_MODEL").unwrap_or_else(|_| DEFAULT_MODEL.to_string());
+    pub fn new(api_key: String, model: String) -> Self {
         let config = ureq::Agent::config_builder()
             .http_status_as_error(false)
             .timeout_global(Some(Duration::from_secs(120)))
             .build();
-        Ok(Self {
+        Self {
             api_key,
             model,
             agent: config.into(),
-        })
+        }
+    }
+
+    pub fn model(&self) -> &str {
+        &self.model
     }
 
     pub fn decide(

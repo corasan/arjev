@@ -1,18 +1,19 @@
 use std::collections::BTreeMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
 use anyhow::{bail, Result};
 use clap::{Parser, Subcommand};
 
 use arjev::argent::ArgentClient;
-use arjev::jev::{Answer, JevClient, NoulCriteria, Question};
+use arjev::decider::{Decider, DeciderKind, Selection};
+use arjev::jev::{Answer, NoulCriteria, Question};
 use arjev::plan::Plan;
 use arjev::run::{resolve_device, Runner};
 use arjev::screen::Screen;
 
 #[derive(Parser)]
-#[command(name = "arjev", about = "Run Jev-judged UI verifications through Argent")]
+#[command(name = "arjev", about = "Run model-judged UI verifications through Argent")]
 struct Cli {
     #[command(subcommand)]
     command: Command,
@@ -28,10 +29,18 @@ enum Command {
         udid: Option<String>,
         #[arg(long)]
         json: bool,
+        #[arg(long)]
+        decider: Option<DeciderKind>,
+        #[arg(long)]
+        model: Option<String>,
     },
     Ask {
         udid: String,
         question: String,
+        #[arg(long)]
+        decider: Option<DeciderKind>,
+        #[arg(long)]
+        model: Option<String>,
     },
 }
 
@@ -47,10 +56,12 @@ fn main() -> ExitCode {
 
 fn load_env(command: &Command) {
     let _ = dotenvy::dotenv();
-    if let Command::Run { plan, .. } = command {
-        if let Some(directory) = plan.parent() {
-            let _ = dotenvy::from_path(directory.join(".env"));
-        }
+    let plan = match command {
+        Command::Run { plan, .. } => Some(plan),
+        _ => None,
+    };
+    if let Some(directory) = plan.and_then(|plan| plan.parent()) {
+        let _ = dotenvy::from_path(directory.join(".env"));
     }
 }
 
@@ -75,13 +86,15 @@ fn dispatch() -> Result<ExitCode> {
             }
             Ok(ExitCode::SUCCESS)
         }
-        Command::Run { plan, udid, json } => {
-            let plan = Plan::load(&plan)?;
-            let udid = match udid {
-                Some(udid) => udid,
-                None => resolve_device(&argent.list_devices()?, &plan.device)?,
-            };
-            let report = Runner::new(argent, plan, udid).run(|step| {
+        Command::Run {
+            plan,
+            udid,
+            json,
+            decider,
+            model,
+        } => {
+            let runner = build_runner(argent, &plan, udid, &Selection::resolve(decider, model))?;
+            let report = runner.run(|step| {
                 if !json {
                     println!("{}", step.line());
                 }
@@ -95,7 +108,12 @@ fn dispatch() -> Result<ExitCode> {
                 ExitCode::FAILURE
             })
         }
-        Command::Ask { udid, question } => {
+        Command::Ask {
+            udid,
+            question,
+            decider,
+            model,
+        } => {
             let screen = Screen::parse(&argent.describe(&udid)?);
             let questions = BTreeMap::from([(
                 "ask".to_string(),
@@ -107,8 +125,11 @@ fn dispatch() -> Result<ExitCode> {
                     },
                 },
             )]);
-            let decision = JevClient::from_env()?
-                .decide(&serde_json::Value::String(screen.state_text()), &questions)?;
+            let decider = Decider::new(&Selection::resolve(decider, model))?;
+            let decision = decider.decide(
+                &serde_json::Value::String(screen.state_text()),
+                &questions,
+            )?;
             match decision.answer("ask")? {
                 Answer::Noul { noul } => {
                     println!("{noul:.3}");
@@ -118,8 +139,22 @@ fn dispatch() -> Result<ExitCode> {
                         ExitCode::FAILURE
                     })
                 }
-                other => bail!("Jev answered with {other:?} instead of a noul"),
+                other => bail!("the decider answered with {other:?} instead of a noul"),
             }
         }
     }
+}
+
+fn build_runner(
+    argent: ArgentClient,
+    plan: &Path,
+    udid: Option<String>,
+    selection: &Selection,
+) -> Result<Runner> {
+    let plan = Plan::load(plan)?;
+    let udid = match udid {
+        Some(udid) => udid,
+        None => resolve_device(&argent.list_devices()?, &plan.device)?,
+    };
+    Ok(Runner::new(argent, plan, udid, selection))
 }
