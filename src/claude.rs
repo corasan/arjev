@@ -1,34 +1,23 @@
 use std::collections::BTreeMap;
-use std::thread::sleep;
-use std::time::Duration;
+use std::io::Write;
+use std::process::{Command, Stdio};
 
 use anyhow::{bail, Context, Result};
 use serde_json::{json, Map, Value};
 
 use crate::jev::{Answer, Decision, Question, Usage};
 
-pub const ENDPOINT: &str = "https://openrouter.ai/api/v1/chat/completions";
-pub const DEFAULT_MODEL: &str = "anthropic/claude-opus-5";
-const ATTEMPTS: u32 = 3;
+pub const DEFAULT_MODEL: &str = "claude-opus-5";
+pub const BINARY: &str = "claude";
 const INSTRUCTIONS: &str = "You are a decision function. Reply only with the JSON object of answers. Probabilities must sum to 1. A noul is the probability that the answer to the question is yes.";
 
-pub struct ChatClient {
-    api_key: String,
+pub struct ClaudeClient {
     model: String,
-    agent: ureq::Agent,
 }
 
-impl ChatClient {
-    pub fn new(api_key: String, model: String) -> Self {
-        let config = ureq::Agent::config_builder()
-            .http_status_as_error(false)
-            .timeout_global(Some(Duration::from_secs(300)))
-            .build();
-        Self {
-            api_key,
-            model,
-            agent: config.into(),
-        }
+impl ClaudeClient {
+    pub fn new(model: String) -> Self {
+        Self { model }
     }
 
     pub fn model(&self) -> &str {
@@ -40,83 +29,95 @@ impl ChatClient {
         state: &Value,
         questions: &BTreeMap<String, Question>,
     ) -> Result<Decision> {
-        let body = request_body(&self.model, state, questions);
-        let mut backoff = Duration::from_millis(500);
-        for attempt in 1..=ATTEMPTS {
-            let mut response = self
-                .agent
-                .post(ENDPOINT)
-                .header("Authorization", format!("Bearer {}", self.api_key))
-                .header("Content-Type", "application/json")
-                .send_json(&body)
-                .context("the chat model could not be reached at OpenRouter")?;
-
-            let status = response.status().as_u16();
-            if (status == 429 || status == 529) && attempt < ATTEMPTS {
-                sleep(backoff);
-                backoff *= 2;
-                continue;
-            }
-            let text = response.body_mut().read_to_string()?;
-            if !(200..300).contains(&status) {
-                bail!("the chat model answered with status {status}: {text}");
-            }
-            return decision(&self.model, &text);
+        let mut child = Command::new(BINARY)
+            .args(arguments(&self.model, questions))
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+            .with_context(|| format!("`{BINARY}` could not be started; install Claude Code and log in"))?;
+        child
+            .stdin
+            .take()
+            .context("claude stdin is closed")?
+            .write_all(prompt(state, questions).as_bytes())?;
+        let output = child.wait_with_output()?;
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            bail!("`{BINARY}` exited with {}: {stderr}{stdout}", output.status);
         }
-        bail!("the chat model stayed rate limited after {ATTEMPTS} attempts")
+        decision(&self.model, &stdout)
     }
 }
 
+pub fn arguments(model: &str, questions: &BTreeMap<String, Question>) -> Vec<String> {
+    [
+        "-p",
+        "--model",
+        model,
+        "--output-format",
+        "json",
+        "--json-schema",
+        &answer_schema(questions).to_string(),
+        "--tools",
+        "",
+        "--max-turns",
+        "1",
+        "--system-prompt",
+        INSTRUCTIONS,
+        "--strict-mcp-config",
+        "--mcp-config",
+        "{\"mcpServers\":{}}",
+    ]
+    .into_iter()
+    .map(str::to_string)
+    .collect()
+}
+
+pub fn prompt(state: &Value, questions: &BTreeMap<String, Question>) -> String {
+    json!({ "state": state, "questions": questions }).to_string()
+}
+
 pub fn decision(model: &str, text: &str) -> Result<Decision> {
-    let body: Value = serde_json::from_str(text)
-        .with_context(|| format!("the chat model returned an unexpected body: {text}"))?;
-    let content = body
-        .pointer("/choices/0/message/content")
-        .and_then(Value::as_str)
-        .with_context(|| format!("the chat model returned no message content: {text}"))?;
-    let usage = match body.get("usage") {
-        Some(usage) => serde_json::from_value(usage.clone())
-            .with_context(|| format!("the chat model returned unreadable usage: {usage}"))?,
-        None => Usage::default(),
+    let body: Value = serde_json::from_str(text.trim())
+        .with_context(|| format!("claude returned an unexpected body: {text}"))?;
+    let result = match &body {
+        Value::Array(events) => events.last().cloned().unwrap_or(Value::Null),
+        other => other.clone(),
     };
+    if result.get("is_error").and_then(Value::as_bool) == Some(true) {
+        bail!(
+            "claude reported an error: {}",
+            result.get("result").and_then(Value::as_str).unwrap_or("no detail")
+        );
+    }
+    let answers = result
+        .get("structured_output")
+        .with_context(|| format!("claude returned no structured_output: {result}"))?;
+    let answers: BTreeMap<String, Answer> = serde_json::from_value(answers.clone())
+        .with_context(|| format!("claude returned answers it cannot keep to: {answers}"))?;
+    let usage = result
+        .get("modelUsage")
+        .and_then(Value::as_object)
+        .and_then(|models| models.values().next())
+        .map(usage)
+        .unwrap_or_default();
     Ok(Decision {
-        model: body
-            .get("model")
-            .and_then(Value::as_str)
-            .unwrap_or(model)
-            .to_string(),
-        answers: answers(content)?,
+        model: model.to_string(),
+        answers,
         usage,
-        provider: body
-            .get("provider")
-            .and_then(Value::as_str)
-            .map(str::to_string),
+        provider: Some("claude-cli".to_string()),
     })
 }
 
-pub fn answers(content: &str) -> Result<BTreeMap<String, Answer>> {
-    serde_json::from_str(content)
-        .with_context(|| format!("the chat model returned answers it cannot keep to: {content}"))
-}
-
-pub fn request_body(
-    model: &str,
-    state: &Value,
-    questions: &BTreeMap<String, Question>,
-) -> Value {
-    json!({
-        "model": model,
-        "messages": [
-            { "role": "system", "content": INSTRUCTIONS },
-            { "role": "user", "content": json!({ "state": state, "questions": questions }).to_string() }
-        ],
-        "temperature": 0,
-        "response_format": {
-            "type": "json_schema",
-            "json_schema": { "name": "answers", "strict": true, "schema": answer_schema(questions) }
-        },
-        "usage": { "include": true }
-    })
+fn usage(model_usage: &Value) -> Usage {
+    let count = |key: &str| model_usage.get(key).and_then(Value::as_u64).unwrap_or(0);
+    Usage {
+        input_tokens: count("inputTokens") + count("cacheCreationInputTokens") + count("cacheReadInputTokens"),
+        output_tokens: count("outputTokens"),
+        cost: model_usage.get("costUSD").and_then(Value::as_f64),
+    }
 }
 
 pub fn answer_schema(questions: &BTreeMap<String, Question>) -> Value {

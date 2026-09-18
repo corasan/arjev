@@ -1,0 +1,63 @@
+{
+  "plan": "settings-general",
+  "model": "claude-opus-5",
+  "steps": [
+    {
+      "step": "act restart-app",
+      "elapsed_ms": 521,
+      "passed": true
+    },
+    {
+      "step": "act await-ui-element",
+      "elapsed_ms": 3104,
+      "passed": true
+    },
+    {
+      "step": "assert root-list",
+      "answer": {
+        "probability": 0.97
+      },
+      "decide_ms": 3286,
+      "input_tokens": 12540,
+      "output_tokens": 70,
+      "cost": 0.1217535,
+      "elapsed_ms": 3608,
+      "passed": true
+    },
+    {
+      "step": "choose general-entry",
+      "answer": {
+        "probability": 0.985,
+        "confidence": 0.99,
+        "choice": "e3"
+      },
+      "decide_ms": 3852,
+      "input_tokens": 13184,
+      "output_tokens": 196,
+      "cost": 0.011501,
+      "elapsed_ms": 4064,
+      "passed": true
+    },
+    {
+      "step": "act await-ui-element",
+      "elapsed_ms": 602,
+      "passed": true
+    },
+    {
+      "step": "assert general-screen",
+      "answer": {
+        "probability": 0.88
+      },
+      "decide_ms": 4345,
+      "input_tokens": 13735,
+      "output_tokens": 318,
+      "cost": 0.1398845,
+      "elapsed_ms": 4609,
+      "passed": true
+    }
+  ],
+  "total_ms": 16510,
+  "outcome": {
+    "status": "pass"
+  }
+}

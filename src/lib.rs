@@ -1,6 +1,6 @@
 pub mod argent;
 pub mod bench;
-pub mod chat;
+pub mod claude;
 pub mod decider;
 pub mod jev;
 pub mod plan;
