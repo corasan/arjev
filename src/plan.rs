@@ -45,6 +45,8 @@ pub enum Step {
         name: String,
         question: String,
         then: ChooseAction,
+        #[serde(default)]
+        roles: Vec<String>,
     },
 }
 

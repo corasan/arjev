@@ -1,0 +1,22 @@
+{
+  "plan": "settings-general",
+  "model": "typesafe/jev-1.13",
+  "steps": [
+    {
+      "step": "act restart-app",
+      "elapsed_ms": 8107,
+      "passed": true
+    },
+    {
+      "step": "act await-ui-element",
+      "elapsed_ms": 10017,
+      "passed": false,
+      "reason": "tool reported success=false: last tree fetch failed: tree fetch did not complete within the 10000ms wait budget"
+    }
+  ],
+  "total_ms": 18125,
+  "outcome": {
+    "status": "fail",
+    "reason": "tool reported success=false: last tree fetch failed: tree fetch did not complete within the 10000ms wait budget"
+  }
+}

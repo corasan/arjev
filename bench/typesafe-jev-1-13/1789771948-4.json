@@ -1,0 +1,63 @@
+{
+  "plan": "settings-general",
+  "model": "typesafe/jev-1.13",
+  "steps": [
+    {
+      "step": "act restart-app",
+      "elapsed_ms": 858,
+      "passed": true
+    },
+    {
+      "step": "act await-ui-element",
+      "elapsed_ms": 6773,
+      "passed": true
+    },
+    {
+      "step": "assert root-list",
+      "answer": {
+        "probability": 0.96
+      },
+      "decide_ms": 553,
+      "input_tokens": 1764,
+      "output_tokens": 21,
+      "cost": 0.000074088,
+      "elapsed_ms": 804,
+      "passed": true
+    },
+    {
+      "step": "choose general-entry",
+      "answer": {
+        "probability": 1.0,
+        "confidence": 1.0,
+        "choice": "e2"
+      },
+      "decide_ms": 321,
+      "input_tokens": 2048,
+      "output_tokens": 153,
+      "cost": 0.000086016,
+      "elapsed_ms": 649,
+      "passed": true
+    },
+    {
+      "step": "act await-ui-element",
+      "elapsed_ms": 1269,
+      "passed": true
+    },
+    {
+      "step": "assert general-screen",
+      "answer": {
+        "probability": 0.97
+      },
+      "decide_ms": 260,
+      "input_tokens": 1462,
+      "output_tokens": 21,
+      "cost": 0.000061404,
+      "elapsed_ms": 442,
+      "passed": true
+    }
+  ],
+  "total_ms": 10797,
+  "outcome": {
+    "status": "pass"
+  }
+}

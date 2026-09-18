@@ -60,9 +60,19 @@ impl Screen {
     }
 
     pub fn interactive(&self) -> Vec<&Element> {
+        self.offerable(&[])
+    }
+
+    pub fn offerable(&self, roles: &[String]) -> Vec<&Element> {
         self.elements
             .iter()
-            .filter(|element| element.is_interactive())
+            .filter(|element| {
+                if roles.is_empty() {
+                    element.is_interactive()
+                } else {
+                    !element.label.is_empty() && roles.iter().any(|role| element.role.contains(role.as_str()))
+                }
+            })
             .collect()
     }
 

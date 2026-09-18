@@ -1,0 +1,99 @@
+name: news-browse
+device: first
+
+steps:
+  - kind: act
+    tool: restart-app
+    args:
+      bundleId: com.apple.news
+
+  - kind: act
+    tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        text: Top Stories
+      timeoutMs: 20000
+
+  - kind: assert
+    name: feed-shown
+    question: Is the Apple News Today feed shown with a Top Stories section and at least one article?
+
+  - kind: choose
+    name: top-article
+    question: Which element is the top story article in the Top Stories section?
+    roles: [Group]
+    then: tap
+
+  - kind: act
+    tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: BackButton
+      timeoutMs: 15000
+
+  - kind: assert
+    name: article-open
+    question: Is a single news article open, with a headline, a byline or source, and body text?
+
+  - kind: act
+    tool: gesture-swipe
+    args:
+      fromX: 0.5
+      fromY: 0.8
+      toX: 0.5
+      toY: 0.25
+
+  - kind: act
+    tool: await-screen-idle
+
+  - kind: assert
+    name: article-scrolled
+    question: Has the article been scrolled down, so the vertical scroll position is past the top?
+
+  - kind: choose
+    name: back-to-feed
+    question: Which element goes back from the article to the Today feed?
+    then: tap
+
+  - kind: act
+    tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        text: Top Stories
+      timeoutMs: 15000
+
+  - kind: act
+    tool: gesture-swipe
+    args:
+      fromX: 0.5
+      fromY: 0.8
+      toX: 0.5
+      toY: 0.3
+
+  - kind: act
+    tool: await-screen-idle
+
+  - kind: assert
+    name: feed-scrolled
+    question: Is the Today feed shown and scrolled down from the top?
+
+  - kind: choose
+    name: second-article
+    question: Which element is a news article card that is not the top story?
+    roles: [Group]
+    then: tap
+
+  - kind: act
+    tool: await-ui-element
+    args:
+      condition: visible
+      selector:
+        identifier: BackButton
+      timeoutMs: 15000
+
+  - kind: assert
+    name: second-article-open
+    question: Is a single news article open, with a headline, a byline or source, and body text?

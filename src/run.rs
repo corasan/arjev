@@ -101,6 +101,7 @@ enum Inquiry<'a> {
         name: &'a str,
         question: &'a str,
         then: ChooseAction,
+        roles: &'a [String],
     },
 }
 
@@ -197,10 +198,12 @@ impl Runner {
                 name,
                 question,
                 then,
+                roles,
             } => Phase::Observe(Inquiry::Choose {
                 name,
                 question,
                 then: *then,
+                roles,
             }),
         };
 
@@ -248,8 +251,9 @@ impl Runner {
                 name,
                 question,
                 then,
+                roles,
             } => {
-                let options = self.offer(screen);
+                let options = self.offer(screen, roles);
                 if options.is_empty() {
                     bail!("no interactive element is on screen to choose from");
                 }
@@ -300,9 +304,9 @@ impl Runner {
         }
     }
 
-    fn offer<'s>(&self, screen: &'s Screen) -> Vec<(String, &'s Element)> {
+    fn offer<'s>(&self, screen: &'s Screen, roles: &[String]) -> Vec<(String, &'s Element)> {
         screen
-            .interactive()
+            .offerable(roles)
             .into_iter()
             .take(MAX_CHOICE_OPTIONS)
             .enumerate()
