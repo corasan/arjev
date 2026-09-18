@@ -128,5 +128,7 @@ python3 demo/compose.py demo/jev-news.mp4 "Jev" demo/opus5-news.mp4 "Claude Opus
 ```
 
 The record script stops Argent's simulator-server for the device before it starts capturing, because the
-simulator has one host-recording slot and the server's frame stream holds it. `compose.py` needs `ffmpeg`
+simulator has one host-recording slot and the server's frame stream holds it. The composer trims each clip
+to its first screen change, so both timers read zero at the first tap rather than at the moment capture
+began. `compose.py` needs `ffmpeg`
 and Pillow. The warm-start News plan ran in 27.1 s with Jev and 46.9 s with Opus 5.

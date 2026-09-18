@@ -25,6 +25,21 @@ def duration(path):
     return float(info["format"]["duration"]), stream["width"], stream["height"]
 
 
+def first_change(path):
+    width, height = 32, 64
+    raw = subprocess.check_output(
+        ["ffmpeg", "-v", "error", "-i", path, "-vf", f"fps=20,scale={width}:{height},format=gray", "-f", "rawvideo", "-"]
+    )
+    size = width * height
+    frames = [raw[i:i + size] for i in range(0, len(raw) - size + 1, size)]
+    first = frames[0]
+    for index, frame in enumerate(frames[1:], start=1):
+        changed = sum(1 for a, b in zip(first, frame) if abs(a - b) > 24)
+        if changed > size * 0.02:
+            return index / 20
+    return 0.0
+
+
 def timer(t):
     tenths = int(t * 10)
     return f"{tenths // 600:02d}:{(tenths // 10) % 60:02d}.{tenths % 10}"
@@ -55,18 +70,20 @@ def main(left, right, output):
     total = 0.0
     for path, label in (left, right):
         own, w, h = duration(path)
+        lead = first_change(path)
+        own -= lead
         total = max(total, own)
-        sides.append((path, label, own, w * HEIGHT // h // 2 * 2))
+        sides.append((path, label, own, w * HEIGHT // h // 2 * 2, lead))
     total += TAIL
     inputs = []
     chains = []
-    for index, (path, label, own, width) in enumerate(sides):
+    for index, (path, label, own, width, lead) in enumerate(sides):
         folder = work / f"header{index}"
         render_header(folder, width, label, own, total)
         inputs += ["-i", path, "-framerate", str(FPS), "-i", str(folder / "%05d.png")]
         video = 2 * index
         chains.append(
-            f"[{video}:v]fps={OUT_FPS}:start_time=0,scale={width}:{HEIGHT},"
+            f"[{video}:v]fps={OUT_FPS}:start_time=0,trim=start={lead:.3f},setpts=PTS-STARTPTS,scale={width}:{HEIGHT},"
             f"tpad=stop_mode=clone:stop_duration={total - own:.3f}[v{index}];"
             f"[{video + 1}:v]fps={OUT_FPS}[h{index}];[h{index}][v{index}]vstack[s{index}]"
         )
