@@ -97,8 +97,8 @@ A failed step's JSON report carries `screen`, the accessibility tree as it was a
 
 ## Jev vs Opus 5
 
-Measured on 2026-09-18. Plan `examples/settings-general.yaml`, five runs each, back to back, iOS 26.5
-simulator `F1036AD5-E359-40CB-8011-67252C1A93BE`. Every run asks three questions. One noul asks whether
+Plan `examples/settings-general.yaml`, five runs each, back to back, on an iPhone 17 Pro simulator running
+iOS 26.5. Every run asks three questions. One noul asks whether
 the Settings root list is on screen, one choice asks which labelled interactive element opens General, and
 one noul asks whether the General screen is on screen. Jev went through OpenRouter. Opus 5 went through the
 local `claude -p` CLI with a minimal system prompt, no tools, and no MCP servers.
