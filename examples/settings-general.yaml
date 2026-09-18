@@ -3,7 +3,7 @@ device: first
 
 steps:
   - kind: act
-    tool: launch-app
+    tool: restart-app
     args:
       bundleId: com.apple.Preferences
 

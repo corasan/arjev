@@ -258,14 +258,20 @@ impl Runner {
     }
 
     fn act(&self, target: &Target) -> Result<()> {
-        match target {
+        let data = match target {
             Target::Tool { tool, args } => self.argent.call(tool, args.clone())?,
             Target::Element { x, y } => self.argent.call(
                 "gesture-tap",
                 json!({ "udid": self.udid, "x": x, "y": y }),
             )?,
         };
-        Ok(())
+        match data.get("success").and_then(Value::as_bool) {
+            Some(false) => bail!(
+                "tool reported success=false: {}",
+                data.get("note").and_then(Value::as_str).unwrap_or("no note")
+            ),
+            _ => Ok(()),
+        }
     }
 
     fn offer<'s>(&self, screen: &'s Screen) -> Vec<(String, &'s Element)> {

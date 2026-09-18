@@ -12,7 +12,7 @@ fn the_example_plan_loads_with_its_defaults_applied() {
     let Step::Act { tool, args } = &plan.steps[0] else {
         panic!("the first step launches an app");
     };
-    assert_eq!(tool, "launch-app");
+    assert_eq!(tool, "restart-app");
     assert_eq!(args["bundleId"], "com.apple.Preferences");
 
     let Step::Assert { threshold, .. } = &plan.steps[2] else {

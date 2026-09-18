@@ -20,16 +20,35 @@ pub fn assert_verdict(noul: f64, threshold: f64) -> AssertVerdict {
     }
 }
 
-/**
- * Turns a Jev choice answer into the runner's decision to tap or to stop.
- *
- * @param answer.choice the winning option key, always one of the element ids offered as criteria
- * @param answer.probabilities every offered element id mapped to its probability; the values sum to 1
- * @param answer.confidence Jev's own confidence in the winning option, 0 to 1
- * @param min_confidence the floor the plan requires before a tap is allowed
- * @returns Tap with the element id to press, or Undecided with a reason recorded in the report
- */
-#[allow(unused_variables)]
+const MIN_MARGIN: f64 = 0.2;
+
 pub fn choose_target(answer: &ChoiceAnswer, min_confidence: f64) -> ChooseVerdict {
-    todo!("owner writes the confidence policy")
+    let mut ranked: Vec<(&String, f64)> = answer
+        .probabilities
+        .iter()
+        .map(|(id, p)| (id, *p))
+        .collect();
+    ranked.sort_by(|a, b| b.1.total_cmp(&a.1));
+    let winner = ranked.first().map(|(_, p)| *p).unwrap_or(0.0);
+    let runner_up = ranked.get(1).map(|(_, p)| *p).unwrap_or(0.0);
+    let standings = ranked
+        .iter()
+        .take(2)
+        .map(|(id, p)| format!("{id}={p:.2}"))
+        .collect::<Vec<_>>()
+        .join(", ");
+    if answer.confidence < min_confidence {
+        return ChooseVerdict::Undecided {
+            reason: format!(
+                "confidence {:.2} below {min_confidence:.2}; top: {standings}",
+                answer.confidence
+            ),
+        };
+    }
+    if winner - runner_up < MIN_MARGIN {
+        return ChooseVerdict::Undecided {
+            reason: format!("margin {:.2} below {MIN_MARGIN:.2}; top: {standings}", winner - runner_up),
+        };
+    }
+    ChooseVerdict::Tap(answer.choice.clone())
 }
