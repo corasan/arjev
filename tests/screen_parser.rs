@@ -73,21 +73,32 @@ fn only_actionable_roles_with_a_label_are_offered_as_choices() {
 #[test]
 fn a_group_role_is_offered_only_when_the_step_asks_for_it() {
     let screen = Screen::parse(
-        "  AXGroup \"Tab Bar\"  (0.000, 0.905, 1.000, 0.095)\n  AXGroup \"CNBC, U.S. to build, 10 minutes ago\"  (0.040, 0.800, 0.448, 0.200)\n  AXButton \"Today\" id=\"BackButton\"  (0.040, 0.071, 0.109, 0.050)\n",
+        "  AXGroup \"Tab Bar\"  (0.000, 0.905, 1.000, 0.095)\n  AXGroup \"CNBC, U.S. to build, 10 minutes ago\"  (0.040, 0.700, 0.448, 0.200)\n  AXButton \"Today\" id=\"BackButton\"  (0.040, 0.071, 0.109, 0.050)\n",
     );
     let groups: Vec<String> = screen
         .offerable(&["Group".to_string()])
         .iter()
         .map(|element| element.describe())
         .collect();
-    assert_eq!(
-        groups,
-        ["AXGroup \"Tab Bar\"", "AXGroup \"CNBC, U.S. to build, 10 minutes ago\""]
-    );
+    assert_eq!(groups, ["AXGroup \"CNBC, U.S. to build, 10 minutes ago\""]);
     assert_eq!(
         screen.interactive().iter().map(|element| element.describe()).collect::<Vec<_>>(),
         ["AXButton \"Today\" id=BackButton"]
     );
+}
+
+#[test]
+fn an_element_clipped_by_the_screen_edge_is_never_offered() {
+    let screen = Screen::parse(
+        "  AXGroup \"Today Feed\"  (0.000, 0.000, 1.000, 1.000)\n  AXGroup \"USA TODAY, clipped card\"  (0.040, 0.000, 0.920, 0.161)\n  AXGroup \"CNN, card under the collapsed nav bar\"  (0.040, 0.030, 0.920, 0.161)\n  AXGroup \"NBC News, whole card\"  (0.040, 0.183, 0.920, 0.204)\n  AXButton \"Today\"  (0.062, 0.910, 0.184, 0.062)\n",
+    );
+    let offered: Vec<String> = screen
+        .offerable(&["Group".to_string()])
+        .iter()
+        .map(|element| element.describe())
+        .collect();
+    assert_eq!(offered, ["AXGroup \"NBC News, whole card\""]);
+    assert_eq!(screen.interactive().len(), 1);
 }
 
 #[test]

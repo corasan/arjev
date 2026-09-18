@@ -50,6 +50,8 @@ pub struct StepResult {
     pub passed: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub reason: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub screen: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -155,6 +157,10 @@ impl Runner {
                 Outcome::Pass => None,
                 Outcome::Fail { reason } => Some(reason.clone()),
             };
+            let screen = match step_outcome {
+                Outcome::Pass => None,
+                Outcome::Fail { .. } => self.argent.describe(&self.udid).ok(),
+            };
             let result = StepResult {
                 step: step.label(),
                 answer: observed.answer,
@@ -162,6 +168,7 @@ impl Runner {
                 elapsed_ms: started.elapsed().as_millis(),
                 passed: step_outcome == Outcome::Pass,
                 reason,
+                screen,
             };
             observe(&result);
             steps.push(result);

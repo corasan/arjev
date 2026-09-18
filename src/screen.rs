@@ -11,6 +11,7 @@ const INTERACTIVE_ROLES: [&str; 7] = [
 ];
 
 const STATE_LIMIT: usize = 12_000;
+const TOP_BAR: f64 = 0.12;
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize)]
 pub struct Frame {
@@ -34,6 +35,13 @@ impl Element {
             self.frame.x + self.frame.w / 2.0,
             self.frame.y + self.frame.h / 2.0,
         )
+    }
+
+    pub fn is_fully_on_screen(&self) -> bool {
+        self.frame.y > 0.0
+            && self.frame.x >= 0.0
+            && self.frame.y + self.frame.h < 1.0
+            && self.frame.x + self.frame.w <= 1.0
     }
 
     pub fn is_interactive(&self) -> bool {
@@ -71,11 +79,14 @@ impl Screen {
     pub fn offerable(&self, roles: &[String]) -> Vec<&Element> {
         self.elements
             .iter()
+            .filter(|element| element.is_fully_on_screen())
             .filter(|element| {
                 if roles.is_empty() {
                     element.is_interactive()
                 } else {
-                    !element.label.is_empty() && roles.iter().any(|role| element.role.contains(role.as_str()))
+                    element.frame.y >= TOP_BAR
+                        && !element.label.is_empty()
+                        && roles.iter().any(|role| element.role.contains(role.as_str()))
                 }
             })
             .collect()

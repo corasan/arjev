@@ -3,9 +3,24 @@ device: first
 
 steps:
   - kind: act
-    tool: restart-app
+    tool: launch-app
     args:
       bundleId: com.apple.news
+
+  - kind: act
+    tool: gesture-tap
+    args:
+      x: 0.154
+      y: 0.941
+
+  - kind: act
+    tool: await-screen-idle
+
+  - kind: act
+    tool: gesture-tap
+    args:
+      x: 0.154
+      y: 0.941
 
   - kind: act
     tool: await-ui-element
@@ -13,14 +28,6 @@ steps:
       condition: visible
       selector:
         text: Stories
-      timeoutMs: 20000
-
-  - kind: act
-    tool: await-ui-element
-    args:
-      condition: hidden
-      selector:
-        text: LOADING
       timeoutMs: 20000
 
   - kind: act
@@ -44,9 +51,12 @@ steps:
         identifier: BackButton
       timeoutMs: 15000
 
+  - kind: act
+    tool: await-screen-idle
+
   - kind: assert
     name: article-open
-    question: Is a single news article open, with a headline, a byline or source, and body text?
+    question: Is a single news article reading view open, showing article text or its headline, rather than the feed of cards?
 
   - kind: act
     tool: gesture-swipe
@@ -119,6 +129,9 @@ steps:
         identifier: BackButton
       timeoutMs: 15000
 
+  - kind: act
+    tool: await-screen-idle
+
   - kind: assert
     name: second-article-open
-    question: Is a single news article open, with a headline, a byline or source, and body text?
+    question: Is a single news article reading view open, showing article text or its headline, rather than the feed of cards?

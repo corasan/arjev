@@ -10,6 +10,8 @@ FONT = "/System/Library/Fonts/Helvetica.ttc"
 HEIGHT = 1400
 HEADER = 230
 FPS = 10
+OUT_FPS = 60
+GAP = 40
 TAIL = 1.5
 BG = (17, 17, 17)
 
@@ -64,13 +66,17 @@ def main(left, right, output):
         inputs += ["-i", path, "-framerate", str(FPS), "-i", str(folder / "%05d.png")]
         video = 2 * index
         chains.append(
-            f"[{video}:v]scale={width}:{HEIGHT},tpad=stop_mode=clone:stop_duration={total - own:.3f}[v{index}];"
-            f"[{video + 1}:v]fps=30[h{index}];[h{index}][v{index}]vstack[s{index}]"
+            f"[{video}:v]fps={OUT_FPS}:start_time=0,scale={width}:{HEIGHT},"
+            f"tpad=stop_mode=clone:stop_duration={total - own:.3f}[v{index}];"
+            f"[{video + 1}:v]fps={OUT_FPS}[h{index}];[h{index}][v{index}]vstack[s{index}]"
         )
-    graph = ";".join(chains) + ";[s0][s1]hstack,pad=iw+60:ih:30:0:color=0x111111[out]"
+    graph = ";".join(chains) + (
+        f";[s0]pad=iw+{GAP}:ih:0:0:color=0x111111[g0];[g0][s1]hstack,"
+        f"pad=iw+{2 * GAP}:ih+{GAP}:{GAP}:0:color=0x111111[out]"
+    )
     subprocess.check_call(
         ["ffmpeg", "-y", "-v", "error", *inputs, "-filter_complex", graph, "-map", "[out]", "-t", f"{total:.3f}",
-         "-r", "30", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-crf", "20", "-movflags", "+faststart", output]
+         "-r", str(OUT_FPS), "-c:v", "libx264", "-pix_fmt", "yuv420p", "-crf", "20", "-movflags", "+faststart", output]
     )
     shutil.rmtree(work, ignore_errors=True)
 

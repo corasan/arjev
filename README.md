@@ -87,9 +87,13 @@ runner-up by 0.2; otherwise the step fails and names the top two candidates.
 
 A `choose` step takes `threshold` (default 0.8) as its confidence floor, the same way `assert` does.
 
-`examples/news-browse.yaml` is the larger example: open Apple News, open the top card, scroll, reveal the
-navigation bar, go back, scroll the feed, open a second card. Apple News must have been opened once on the
-simulator so its welcome screen and location prompt are gone.
+`examples/news-browse.yaml` is the larger example: bring Apple News to the front, tap the Today tab twice to
+reach the top of the feed, open the top card, scroll, reveal the navigation bar, go back, scroll the feed,
+open a second card. Apple News must have been opened once on the simulator so its welcome screen and location
+prompt are gone. Cards clipped by a screen edge or sitting under the collapsed navigation bar are never
+offered, because a tap there does nothing.
+
+A failed step's JSON report carries `screen`, the accessibility tree as it was after the failure.
 
 ## Jev vs Opus 5
 
@@ -113,15 +117,16 @@ Raw reports are under `bench/typesafe-jev-1-13/` and `bench/claude-opus-5/`.
 
 ## Demo video
 
-Record one real-time run per decider with Argent, then stack them side by side with a label, a timer, and a
-DONE badge per side:
+`demo/record.sh` records one real-time run at the simulator's display rate with `simctl recordVideo`, then
+`demo/compose.py` stacks two recordings side by side at 60 fps with a label, a timer, and a DONE badge per
+side:
 
 ```sh
-argent run screen-recording-start --udid <UDID> --trimStatic false --timeLimitSeconds 400
-cargo run -q -- run examples/news-browse.yaml --udid <UDID> --decider jev
-argent run screen-recording-stop --udid <UDID>      # then move the mp4 to demo/jev-news.mp4
-# repeat with --decider claude into demo/opus5-news.mp4
+./demo/record.sh <UDID> jev demo/jev-news.mp4
+./demo/record.sh <UDID> claude demo/opus5-news.mp4
 python3 demo/compose.py demo/jev-news.mp4 "Jev" demo/opus5-news.mp4 "Claude Opus 5" demo/jev-vs-opus5-news.mp4
 ```
 
-`compose.py` needs `ffmpeg` and Pillow. The News plan ran in 26.5 s with Jev and 62.7 s with Opus 5.
+The record script stops Argent's simulator-server for the device before it starts capturing, because the
+simulator has one host-recording slot and the server's frame stream holds it. `compose.py` needs `ffmpeg`
+and Pillow. The warm-start News plan ran in 27.1 s with Jev and 46.9 s with Opus 5.
