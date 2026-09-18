@@ -12,16 +12,27 @@ steps:
     args:
       condition: visible
       selector:
-        text: Top Stories
+        text: Sports
       timeoutMs: 20000
+
+  - kind: act
+    tool: await-ui-element
+    args:
+      condition: hidden
+      selector:
+        text: LOADING
+      timeoutMs: 20000
+
+  - kind: act
+    tool: await-screen-idle
 
   - kind: assert
     name: feed-shown
-    question: Is the Apple News Today feed shown with a Top Stories section and at least one article?
+    question: Is the Apple News Today feed shown, with a section heading and at least one article card?
 
   - kind: choose
     name: top-article
-    question: Which element is the top story article in the Top Stories section?
+    question: Which element is the first news article card at the top of the feed, below the section heading?
     roles: [Group]
     then: tap
 
@@ -52,9 +63,20 @@ steps:
     name: article-scrolled
     question: Has the article been scrolled down, so the vertical scroll position is past the top?
 
+  - kind: act
+    tool: gesture-swipe
+    args:
+      fromX: 0.5
+      fromY: 0.4
+      toX: 0.5
+      toY: 0.6
+
+  - kind: act
+    tool: await-screen-idle
+
   - kind: choose
     name: back-to-feed
-    question: Which element goes back from the article to the Today feed?
+    question: Which element is the back button in the navigation bar that returns from the article to the Today feed?
     then: tap
 
   - kind: act
@@ -62,7 +84,7 @@ steps:
     args:
       condition: visible
       selector:
-        text: Top Stories
+        text: Sports
       timeoutMs: 15000
 
   - kind: act
@@ -82,7 +104,7 @@ steps:
 
   - kind: choose
     name: second-article
-    question: Which element is a news article card that is not the top story?
+    question: Which element is a news article card that is not the first card and is not marked Apple News Plus?
     roles: [Group]
     then: tap
 

@@ -79,9 +79,15 @@ steps:
     then: tap
 ```
 
-`choose` offers Jev every labelled interactive element on screen and acts on the winner. The confidence
-policy that turns Jev's answer into a tap lives in `choose_target` in `src/verdict.rs`, which is deliberately
-left unimplemented for the owner to write.
+`choose` offers the decider every labelled interactive element on screen (buttons, cells, links, fields,
+switches) and taps the winner. Add `roles: [Group]` to offer other roles instead, which is how the News plan
+picks article cards. Each option carries the element's role, label, and accessibility id. The policy in
+`choose_target` in `src/verdict.rs` taps only when confidence is at least 0.8 and the winner leads the
+runner-up by 0.2; otherwise the step fails and names the top two candidates.
+
+`examples/news-browse.yaml` is the larger example: open Apple News, open the top card, scroll, reveal the
+navigation bar, go back, scroll the feed, open a second card. Apple News must have been opened once on the
+simulator so its welcome screen and location prompt are gone.
 
 ## Jev vs Opus 5
 

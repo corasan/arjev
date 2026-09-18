@@ -24,6 +24,7 @@ pub struct Frame {
 pub struct Element {
     pub role: String,
     pub label: String,
+    pub id: String,
     pub frame: Frame,
 }
 
@@ -40,7 +41,11 @@ impl Element {
     }
 
     pub fn describe(&self) -> String {
-        format!("{} \"{}\"", self.role, self.label)
+        if self.id.is_empty() {
+            format!("{} \"{}\"", self.role, self.label)
+        } else {
+            format!("{} \"{}\" id={}", self.role, self.label, self.id)
+        }
     }
 }
 
@@ -113,10 +118,16 @@ fn parse_line(line: &str) -> Option<Element> {
         None => (head, String::new()),
     };
     let role = role_part.split_whitespace().last()?.to_string();
+    let id = head
+        .split_once("id=\"")
+        .and_then(|(_, rest)| rest.split_once('"'))
+        .map(|(id, _)| id.to_string())
+        .unwrap_or_default();
 
     Some(Element {
         role,
         label,
+        id,
         frame: Frame { x, y, w, h },
     })
 }
