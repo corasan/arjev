@@ -6,6 +6,7 @@ use anyhow::{bail, Result};
 use clap::{Parser, Subcommand};
 
 use arjev::argent::ArgentClient;
+use arjev::bench::{stamp, write_report, Summary};
 use arjev::decider::{Decider, DeciderKind, Selection};
 use arjev::jev::{Answer, NoulCriteria, Question};
 use arjev::plan::Plan;
@@ -42,6 +43,17 @@ enum Command {
         #[arg(long)]
         model: Option<String>,
     },
+    Bench {
+        plan: PathBuf,
+        #[arg(long, default_value_t = 5)]
+        runs: usize,
+        #[arg(long)]
+        udid: Option<String>,
+        #[arg(long)]
+        decider: Option<DeciderKind>,
+        #[arg(long)]
+        model: Option<String>,
+    },
 }
 
 fn main() -> ExitCode {
@@ -57,7 +69,7 @@ fn main() -> ExitCode {
 fn load_env(command: &Command) {
     let _ = dotenvy::dotenv();
     let plan = match command {
-        Command::Run { plan, .. } => Some(plan),
+        Command::Run { plan, .. } | Command::Bench { plan, .. } => Some(plan),
         _ => None,
     };
     if let Some(directory) = plan.and_then(|plan| plan.parent()) {
@@ -103,6 +115,37 @@ fn dispatch() -> Result<ExitCode> {
                 println!("{}", serde_json::to_string_pretty(&report)?);
             }
             Ok(if report.passed() {
+                ExitCode::SUCCESS
+            } else {
+                ExitCode::FAILURE
+            })
+        }
+        Command::Bench {
+            plan,
+            runs,
+            udid,
+            decider,
+            model,
+        } => {
+            let selection = Selection::resolve(decider, model);
+            let runner = build_runner(argent, &plan, udid, &selection)?;
+            let stamp = stamp();
+            let mut reports = Vec::new();
+            for run in 1..=runs {
+                let report = runner.run(|_| {});
+                let path = write_report(Path::new("bench"), &selection.model, stamp, run, &report)?;
+                eprintln!(
+                    "run {run}/{runs} {} {}ms {}",
+                    if report.passed() { "pass" } else { "fail" },
+                    report.total_ms,
+                    path.display()
+                );
+                reports.push(report);
+            }
+            let summary = Summary::of(&selection.model, &reports);
+            println!("{}", Summary::header());
+            println!("{}", summary.row());
+            Ok(if summary.passes == summary.runs {
                 ExitCode::SUCCESS
             } else {
                 ExitCode::FAILURE
